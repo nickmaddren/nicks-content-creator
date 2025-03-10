@@ -27,21 +27,18 @@ export const ImageEdit = ({ image }: Props) => {
   const debouncedDimensions = useDebounce(dimensions, 500);
   const debouncedBlur = useDebounce(blur, 500);
 
-  const handleDimension = useCallback(
+  // Clamps the image dimensions to a min and max
+  const clampDimension = useCallback(
     (value: number, dimension: "width" | "height") => {
-      if (value < 10 || Number.isNaN(value)) {
-        return 10;
-      } else if (value > image[dimension]) {
-        return image[dimension];
-      } else {
-        return value;
-      }
+      if (value < 10 || Number.isNaN(value)) return 10;
+      if (value > image[dimension]) return image[dimension];
+      return value;
     },
     [image]
   );
 
-  const safeWidth = handleDimension(debouncedDimensions[0], "width");
-  const safeHeight = handleDimension(debouncedDimensions[1], "height");
+  const safeWidth = clampDimension(debouncedDimensions[0], "width");
+  const safeHeight = clampDimension(debouncedDimensions[1], "height");
 
   const sharedParams = useMemo(
     () => ({
@@ -56,13 +53,15 @@ export const ImageEdit = ({ image }: Props) => {
     return `${PICSUM_URL}/id/${image.id}/${safeWidth}/${safeHeight}?${params}`;
   }, [safeWidth, safeHeight, sharedParams]);
 
+  // Fires the image loading state if it isn't cached
   useEffect(() => {
-    const image = new Image();
-    image.src = src;
-    if (image.complete) return;
+    const imgLoader = new Image();
+    imgLoader.src = src;
+    if (imgLoader.complete) return;
     setIsLoading(true);
   }, [src]);
 
+  // Adds image options state to search params
   useEffect(() => {
     const params = new URLSearchParams({
       width: safeWidth.toString(),
@@ -77,8 +76,10 @@ export const ImageEdit = ({ image }: Props) => {
       <div className="flex-1 flex flex-col gap-8 sm:flex-row">
         <div className="flex-1 flex items-center justify-center relative bg-gray-100 inset-shadow-sm">
           <img
+            alt={`Image by ${image.author}`}
             src={src}
             onLoad={() => setIsLoading(false)}
+            onError={() => setIsLoading(false)}
             className="max-w-full max-h-full absolute"
           />
           {isLoading ? (
